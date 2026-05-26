@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.eggs/
+*.egg-info/
+dist/
+build/
+.env
+.venv
+env/
+venv/
+.ipynb_checkpoints/
+mia_rl/outputs/*.png
+mia_rl/outputs/*.pdf
+mia_rl/outputs/*.csv
