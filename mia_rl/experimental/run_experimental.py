@@ -10,10 +10,12 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+import datetime
 from pathlib import Path
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -51,14 +53,17 @@ def run_double_q_experiment(episodes: int = 200, log_dir: str | Path = "runs/dou
 def run_dqn_tictactoe_experiment(episodes: int = 1000, eval_every: int = 100, log_dir: str | Path = "runs/dqn") -> None:
     print(f"\n--- Training DQN on TicTacToe ({episodes} episodes) ---")
     env = TicTacToeEnv()
-    agent = DQNAgent(n_features=27, n_actions=9, alpha=0.001, gamma=0.99, epsilon=0.15, seed=42)
+    agent = DQNAgent(n_features=27, n_actions=9, alpha=0.0003, gamma=0.99, epsilon=0.2, seed=42)
     
     writer = SummaryWriter(log_dir=log_dir)
     
     losses = []
     win_rates = []
     
-    for ep in range(1, episodes + 1):
+    pbar = tqdm(range(1, episodes + 1), desc="DQN", unit="ep")
+    last_win_rate = 0.0
+
+    for ep in pbar:
         state = env.reset()
         agent_player = 1 if ep % 2 == 0 else -1  # Alternate sides
         
@@ -104,7 +109,11 @@ def run_dqn_tictactoe_experiment(episodes: int = 1000, eval_every: int = 100, lo
             if loss is not None:
                 losses.append(loss)
                 writer.add_scalar("DQN/Loss", loss, agent.update_count)
-                
+
+        # Update tqdm postfix every episode
+        avg_loss = np.mean(losses[-100:]) if losses else 0.0
+        pbar.set_postfix(loss=f"{avg_loss:.4f}", wr=f"{last_win_rate:.0%}")
+
         # Periodic evaluation vs random opponent
         if ep % eval_every == 0:
             wins = 0
@@ -128,13 +137,13 @@ def run_dqn_tictactoe_experiment(episodes: int = 1000, eval_every: int = 100, lo
                 if winner == eval_agent_player:
                     wins += 1
             
-            win_rate = wins / n_eval_games
-            win_rates.append(win_rate)
-            writer.add_scalar("DQN/EvalWinRate", win_rate, ep)
-            print(f"Episode {ep:4d} | Average Loss: {np.mean(losses[-100:]):.4f} if losses else 0.0 | Win Rate vs Random: {win_rate:.1%}")
+            last_win_rate = wins / n_eval_games
+            win_rates.append(last_win_rate)
+            writer.add_scalar("DQN/EvalWinRate", last_win_rate, ep)
+            pbar.set_postfix(loss=f"{avg_loss:.4f}", wr=f"{last_win_rate:.0%}")
             
     writer.close()
-    print("DQN training complete.")
+    print(f"DQN training complete. Final win rate vs random: {last_win_rate:.1%}")
 
 
 def main() -> None:
@@ -145,12 +154,16 @@ def main() -> None:
     
     outputs_dir = Path(__file__).resolve().parents[1] / "outputs" / "runs" / "experimental"
     outputs_dir.mkdir(parents=True, exist_ok=True)
+
+    # Each run gets its own timestamped subfolder → preserved in TensorBoard
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     
     t0 = time.perf_counter()
-    run_double_q_experiment(episodes=args.double_q_episodes, log_dir=outputs_dir / "double_q")
-    run_dqn_tictactoe_experiment(episodes=args.dqn_episodes, eval_every=100, log_dir=outputs_dir / "dqn")
+    run_double_q_experiment(episodes=args.double_q_episodes, log_dir=outputs_dir / f"double_q_{ts}")
+    run_dqn_tictactoe_experiment(episodes=args.dqn_episodes, eval_every=100, log_dir=outputs_dir / f"dqn_{ts}")
     print(f"\nAll experiments complete in {time.perf_counter() - t0:.2f}s!")
     print(f"TensorBoard logs written to: {outputs_dir}")
+    print(f"Run label: {ts}")
 
 
 if __name__ == "__main__":

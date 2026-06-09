@@ -74,7 +74,7 @@ def benchmark_windy_gridworld() -> list[list[str]]:
 
     print("\n[2/3] Benchmarking Windy Gridworld Control Agents...")
     env = WindyGridworldEnv()
-    episodes = 200
+    episodes = 1000
 
     def phi(s, a):
         return state_action_features(s, a, env)

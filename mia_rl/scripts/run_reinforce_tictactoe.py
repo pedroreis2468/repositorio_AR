@@ -94,13 +94,23 @@ def main() -> None:
         seed=args.seed,
     )
 
+    import datetime
+    from torch.utils.tensorboard import SummaryWriter
+
+    runs_dir = PACKAGE_ROOT / "outputs" / "runs" / "reinforce"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    writer = SummaryWriter(log_dir=runs_dir / f"reinforce_{ts}")
+
     history = train(
         agent=agent,
         num_episodes=args.episodes,
         eval_every=args.eval_every,
         eval_episodes=args.eval_episodes,
         seed=args.seed,
+        writer=writer,
     )
+    writer.close()
 
     fig = plot_results(history)
     output_dir = PACKAGE_ROOT / args.output_dir

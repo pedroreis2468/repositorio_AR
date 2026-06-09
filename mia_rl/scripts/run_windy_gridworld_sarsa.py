@@ -47,7 +47,18 @@ def main() -> None:
         env = WindyGridworldEnv()
         agent = SarsaControl(actions=ACTIONS, alpha=args.alpha, epsilon=args.epsilon, gamma=args.gamma, seed=args.seed)
 
-        episode_lengths, episode_rewards = train_control_agent(env, agent, args.episodes, max_steps=args.max_steps)
+        import datetime
+        from torch.utils.tensorboard import SummaryWriter
+
+        runs_dir = PACKAGE_ROOT / "outputs" / "runs" / "sarsa"
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        writer = SummaryWriter(log_dir=runs_dir / f"sarsa_{ts}")
+
+        episode_lengths, episode_rewards = train_control_agent(
+            env, agent, args.episodes, max_steps=args.max_steps, writer=writer
+        )
+        writer.close()
         policy = greedy_policy_from_agent(env, agent)
         path = greedy_path(env, policy)
 

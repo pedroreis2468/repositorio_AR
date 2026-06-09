@@ -13,3 +13,4 @@ venv/
 mia_rl/outputs/*.png
 mia_rl/outputs/*.pdf
 mia_rl/outputs/*.csv
+mia_rl/outputs/runs/

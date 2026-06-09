@@ -24,7 +24,9 @@ def t_import_core():
 def t_import_agents():
     from mia_rl.agents.prediction.monte_carlo import FirstVisitMonteCarloPrediction
     from mia_rl.agents.prediction.td import TD0Prediction
+    from mia_rl.agents.prediction.td_n import NStepTDPrediction
     from mia_rl.agents.control.sarsa import SarsaControl
+    from mia_rl.agents.control.n_step_sarsa import NStepSarsaControl
     from mia_rl.agents.control.reinforce import ReinforceAgent
     from mia_rl.agents.planning.mcts import MCTSAgent, MCTSNode
     # torch_sarsa is optional (requires PyTorch in the environment)
@@ -124,6 +126,32 @@ def t_dqn_functional():
     loss = agent.update_model()
     assert loss is not None
 
+def t_n_step_sarsa_functional():
+    from mia_rl.agents.control.n_step_sarsa import NStepSarsaControl
+    from mia_rl.envs.windy_gridworld import ACTIONS, WindyGridworldEnv
+    from mia_rl.core.base import Transition
+    env = WindyGridworldEnv()
+    agent = NStepSarsaControl(actions=ACTIONS, n_steps=3, seed=42)
+    agent.reset()
+    state = env.reset()
+    action = agent.select_action(state)
+    next_state, reward, done = env.step(action)
+    agent.update_transition(Transition(state, action, reward, next_state, done))
+
+def t_n_step_td_functional():
+    from mia_rl.envs.blackjack import BlackjackEnv
+    from mia_rl.agents.prediction.td_n import NStepTDPrediction
+    from mia_rl.experiments.training import generate_episode
+    from mia_rl.policies.blackjack import ThresholdPolicy
+
+    env = BlackjackEnv()
+    agent = NStepTDPrediction(n=3)
+    agent.reset()
+    policy = ThresholdPolicy(threshold=20)
+    for _ in range(5):
+        ep = generate_episode(env, policy)
+        agent.update_episode(ep)
+
 # ── Run all ───────────────────────────────────────────────────────────────────
 print("\nmia_rl Portfolio — Smoke Tests")
 print("=" * 40)
@@ -139,6 +167,8 @@ test("MC prediction functional", t_mc_prediction)
 test("Experimental imports",   t_import_experimental)
 test("Double Q functional",    t_double_q_functional)
 test("DQN functional",         t_dqn_functional)
+test("n-step SARSA functional", t_n_step_sarsa_functional)
+test("n-step TD functional",    t_n_step_td_functional)
 
 print("=" * 40)
 if errors:

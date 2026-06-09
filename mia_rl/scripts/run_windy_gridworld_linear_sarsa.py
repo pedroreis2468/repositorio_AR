@@ -86,8 +86,19 @@ def main() -> None:
         seed=args.seed,
     )
 
+    import datetime
+    from torch.utils.tensorboard import SummaryWriter
+
+    runs_dir = PACKAGE_ROOT / "outputs" / "runs" / "linear_sarsa"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    writer = SummaryWriter(log_dir=runs_dir / f"linear_sarsa_{ts}")
+
     print(f"Training LinearSarsaControl for {args.episodes} episodes...")
-    episode_lengths, _, td_error_curve = train_fa_agent(env, agent, args.episodes, max_steps=args.max_steps)
+    episode_lengths, _, td_error_curve = train_fa_agent(
+        env, agent, args.episodes, max_steps=args.max_steps, writer=writer
+    )
+    writer.close()
 
     policy = greedy_policy_from_agent(env, agent)
     path = greedy_path(env, policy)

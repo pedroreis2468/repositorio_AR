@@ -207,15 +207,27 @@ def main() -> None:
     policies: dict[str, dict] = {}
     paths: dict[str, list] = {}
 
+    import datetime
+    from torch.utils.tensorboard import SummaryWriter
+
+    runs_dir = PACKAGE_ROOT / "outputs" / "runs" / "torch_sarsa_compare"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
     for name, agent in agents.items():
         print(f"Training {name} for {args.episodes} episodes...")
+        run_name = name.lower().replace(" ", "_").replace("(", "").replace(")", "")
+        writer = SummaryWriter(log_dir=runs_dir / f"{run_name}_{ts}")
+
         if name == "Tabular SARSA":
-            lengths, _ = train_control_agent(env, agent, args.episodes, max_steps=args.max_steps)
+            lengths, _ = train_control_agent(env, agent, args.episodes, max_steps=args.max_steps, writer=writer)
             all_lengths[name] = lengths
         else:
-            lengths, _, td_errors = train_fa_agent(env, agent, args.episodes, max_steps=args.max_steps)
+            lengths, _, td_errors = train_fa_agent(env, agent, args.episodes, max_steps=args.max_steps, writer=writer)
             all_lengths[name] = lengths
             all_td_errors[name] = td_errors
+
+        writer.close()
 
         policies[name] = greedy_policy_from_agent(env, agent)
         paths[name] = greedy_path(env, policies[name])
